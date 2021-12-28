@@ -36,6 +36,8 @@ defmodule Life.Scene.Home do
 
     %{cell_size: cell_size} = Application.get_env(:life, :attrs)
 
+    self() |> IO.inspect()
+
     grid_size = height
     x_offset = grid_size + 100
 
@@ -46,29 +48,44 @@ defmodule Life.Scene.Home do
         g
         |> text("Life Iterations: ", translate: {x_offset, 100}, id: :life_iteration)
         |> button("Start", translate: {x_offset, 150}, id: :start_btn)
+        |> button("Stop", translate: {x_offset, 200}, id: :stop_btn)
       end)
 
-    Server.subscribe(__MODULE__)
+    Server.subscribe(self())
 
     state = %{
       graph: graph,
-      is_started?: false,
-      iteration: 0
+      iteration: 0,
+      cell_size: cell_size
     }
 
     {:ok, state, push: graph}
   end
 
   @impl Scenic.Scene
-  def handle_cast({:evolution, grid_state}, state) do
-    grid_state |> IO.inspect()
-    {:noreply, state}
+  def handle_cast({:evolution, evolution}, %{graph: graph, cell_size: cell_size} = state) do
+    updated_graph =
+      evolution
+      |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
+        id = String.to_atom("#{row}:#{col}")
+        fill = if v, do: :blue, else: :clear
+        acc |> Graph.modify(id, &rectangle(&1, {cell_size, cell_size}, fill: fill))
+      end)
+
+    {:noreply, state, push: updated_graph}
   end
 
   @impl Scenic.Scene
   def filter_event({:click, :start_btn} = event, _from, state) do
     IO.puts("Start clicked")
-    Server.publish()
+    Server.start()
+    {:cont, event, state}
+  end
+
+  @impl Scenic.Scene
+  def filter_event({:click, :stop_btn} = event, _from, state) do
+    IO.puts("Stop clicked")
+    Server.stop()
     {:cont, event, state}
   end
 

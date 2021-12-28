@@ -15,50 +15,91 @@ defmodule Life.Server do
 
   @impl true
   def init(%{size: {_, height}, cell_size: cell_size}) do
+    # TODO: Add rate of evolution to attrs
     IO.puts("Initializing evolution server")
 
-    cells = for row <- 0..height//cell_size, col <- 0..height//cell_size, do: {row, col}
-    server_state = cells |> Map.new(fn pos -> {pos, false} end)
-    Agent.start_link(fn -> server_state end, name: :server_state)
+    Agent.start_link(fn -> MapSet.new() end, name: :subscribers)
 
-    {:ok, MapSet.new()}
+    cells = for row <- 0..height//cell_size, col <- 0..height//cell_size, do: {row, col}
+    cur = cells |> Map.new(fn pos -> {pos, false} end)
+
+    state = %{
+      cur: cur,
+      timer: nil
+    }
+
+    {:ok, state}
   end
 
   def subscribe(pid) do
-    IO.puts("#{pid} subscribed to #{__MODULE__}")
+    IO.puts("Subscribed to #{__MODULE__}")
     GenServer.cast(__MODULE__, {:subscribe, pid})
   end
 
   def unsubscribe(pid) do
-    IO.puts("#{pid} unsubscribed from #{__MODULE__}")
+    IO.puts("Unsubscribed from #{__MODULE__}")
     GenServer.cast(__MODULE__, {:unsubscribe, pid})
   end
 
-  def publish() do
-    IO.puts("Publishing evolution from server #{__MODULE__}")
-    Process.alive?(self()) |> IO.inspect()
+  def start() do
+    IO.puts("Starting evolution")
+    GenServer.cast(__MODULE__, {:evolve, :start})
+  end
 
-    s = Agent.get(:server_state, fn s -> s end)
-    GenServer.call(__MODULE__, {:notify_subscribers, :evolution, s})
+  def stop() do
+    IO.puts("Stopping evolution")
+    GenServer.cast(__MODULE__, {:evolve, :stop})
   end
 
   @impl true
   def handle_cast({:subscribe, pid}, state) do
-    MapSet.put(state, pid) |> IO.inspect()
-    {:noreply, MapSet.put(state, pid)}
+    Agent.get_and_update(:subscribers, fn s -> {s, MapSet.put(s, pid)} end)
+    {:noreply, state}
   end
 
   @impl true
   def handle_cast({:unsubscribe, pid}, state) do
-    {:noreply, MapSet.delete(state, pid)}
+    Agent.get_and_update(:subscribers, fn s -> {s, MapSet.delete(s, pid)} end)
+    {:noreply, state}
   end
 
   @impl true
-  def handle_call({:notify_subscribers, event, data}, _from, state) do
+  def handle_cast({:evolve, :stop}, %{timer: timer} = state) do
+    Process.cancel_timer(timer, async: false, info: true)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:evolve, :start}, state) do
+    Process.send(self(), :evolve, [:noconnect])
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:notify_subscribers, event, data}, state) do
     IO.puts("Notifying all subscribers in #{__MODULE__}")
 
-    state |> IO.inspect() |> Enum.each(&GenServer.cast(&1, {event, data}))
+    Agent.get(:subscribers, fn s -> s end)
+    |> Enum.each(&GenServer.cast(&1, {event, data}))
 
-    {:reply, state, state}
+    {:noreply, state}
+  end
+
+  # This function is responsible for the evolution pattern
+  @impl true
+  def handle_info(:evolve, %{cur: cur} = state) do
+    IO.puts("Evolving")
+
+    evolved =
+      cur
+      |> Enum.reduce(cur, fn {{row, col}, s}, acc ->
+        Map.update(acc, {row, col}, s, &(!&1))
+      end)
+
+    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, evolved})
+
+    timer = Process.send_after(self(), :evolve, 1_000)
+
+    {:noreply, %{state | cur: evolved, timer: timer}}
   end
 end
