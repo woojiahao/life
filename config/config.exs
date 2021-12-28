@@ -5,6 +5,7 @@ use Mix.Config
 # Configure the main viewport for the Scenic application
 config :life, :viewport, %{
   name: :main_viewport,
+  cell_size: 50,
   size: {1200, 800},
   default_scene: {Life.Scene.Home, nil},
   drivers: [
