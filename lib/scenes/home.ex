@@ -4,6 +4,7 @@ defmodule Life.Scene.Home do
 
   alias Scenic.Graph
   alias Scenic.ViewPort
+  alias Life.Server
 
   import Scenic.Primitives
   import Scenic.Components
@@ -31,8 +32,9 @@ defmodule Life.Scene.Home do
 
   @impl Scenic.Scene
   def init(_, opts) do
-    {:ok, %ViewPort.Status{size: {_, height}}, cell_size: cell_size} =
-      ViewPort.info(opts[:viewport])
+    {:ok, %ViewPort.Status{size: {_, height}}} = ViewPort.info(opts[:viewport])
+
+    %{cell_size: cell_size} = Application.get_env(:life, :attrs)
 
     grid_size = height
     x_offset = grid_size + 100
@@ -43,8 +45,10 @@ defmodule Life.Scene.Home do
       |> group(fn g ->
         g
         |> text("Life Iterations: ", translate: {x_offset, 100}, id: :life_iteration)
-        |> button("Start", translate: {x_offset, 150}, id: :pause)
+        |> button("Start", translate: {x_offset, 150}, id: :start_btn)
       end)
+
+    Server.subscribe(__MODULE__)
 
     state = %{
       graph: graph,
@@ -53,6 +57,19 @@ defmodule Life.Scene.Home do
     }
 
     {:ok, state, push: graph}
+  end
+
+  @impl Scenic.Scene
+  def handle_cast({:evolution, grid_state}, state) do
+    grid_state |> IO.inspect()
+    {:noreply, state}
+  end
+
+  @impl Scenic.Scene
+  def filter_event({:click, :start_btn} = event, _from, state) do
+    IO.puts("Start clicked")
+    Server.publish()
+    {:cont, event, state}
   end
 
   # @impl Scenic.Scene
