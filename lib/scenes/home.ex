@@ -10,17 +10,18 @@ defmodule Life.Scene.Home do
   import Scenic.Components
 
   @text_size 24
+  @fill :black
 
   defp generate_grid(graph, cell_size, initial) do
     initial
     |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
       id = String.to_atom("#{row}:#{col}")
-      fill = if v, do: :blue, else: :clear
+      fill = if v, do: @fill, else: :clear
 
       # translation prioritize x (col) then y (row)
       rectangle(acc, {cell_size, cell_size},
         translate: {(col - 1) * cell_size, (row - 1) * cell_size},
-        stroke: {2, :white},
+        stroke: {1, :black},
         id: id,
         fill: fill
       )
@@ -39,11 +40,15 @@ defmodule Life.Scene.Home do
     initial = Server.get_initial()
 
     graph =
-      Graph.build(font: :roboto, font_size: @text_size)
+      Graph.build(font: :roboto, font_size: @text_size, clear_color: :white)
       |> group(&generate_grid(&1, cell_size, initial))
       |> group(fn g ->
         g
-        |> text("Life Iterations: 0", translate: {x_offset, 100}, id: :life_iteration)
+        |> text("Life Iterations: 0",
+          translate: {x_offset, 100},
+          id: :life_iteration,
+          fill: :black
+        )
         |> button("Start/Pause", translate: {x_offset, 150}, id: :action_btn)
       end)
 
@@ -66,7 +71,7 @@ defmodule Life.Scene.Home do
       evolution
       |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
         id = String.to_atom("#{row}:#{col}")
-        fill = if v, do: :blue, else: :clear
+        fill = if v, do: @fill, else: :clear
         acc |> Graph.modify(id, &rectangle(&1, {cell_size, cell_size}, fill: fill))
       end)
       |> then(fn g ->
