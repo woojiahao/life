@@ -12,18 +12,15 @@ defmodule Life.Scene.Home do
   @text_size 24
 
   defp generate_grid(graph, grid_size, cell_size) do
-    cells =
-      for row <- 0..grid_size//cell_size,
-          col <- 0..grid_size//cell_size,
-          do: {row, col}
+    cell_count = div(grid_size, cell_size)
 
-    # TODO: Fix bug where we are generating an entirely new row and column
+    cells = for row <- 1..cell_count, col <- 1..cell_count, do: {row, col}
 
     Enum.reduce(cells, graph, fn {row, col}, acc ->
       id = String.to_atom("#{row}:#{col}")
 
       rectangle(acc, {cell_size, cell_size},
-        translate: {row, col},
+        translate: {row * cell_size, col * cell_size},
         stroke: {2, :white},
         id: id
       )
@@ -48,7 +45,7 @@ defmodule Life.Scene.Home do
         g
         |> text("Life Iterations: 0", translate: {x_offset, 100}, id: :life_iteration)
         |> button("Start", translate: {x_offset, 150}, id: :start_btn)
-        |> button("Stop", translate: {x_offset, 200}, id: :stop_btn)
+        |> button("Stop", translate: {x_offset + 75, 150}, id: :stop_btn)
       end)
 
     Server.subscribe(self())

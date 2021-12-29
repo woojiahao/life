@@ -20,11 +20,13 @@ defmodule Life.Server do
 
     Agent.start_link(fn -> MapSet.new() end, name: :subscribers)
 
-    cells = for row <- 0..height//cell_size, col <- 0..height//cell_size, do: {row, col}
+    cell_count = div(height, cell_size)
+    cells = for row <- 1..cell_count, col <- 1..cell_count, do: {row, col}
     cur = cells |> Map.new(fn pos -> {pos, false} end)
 
     state = %{
       cur: cur,
+      cell_count: cell_count,
       iteration: 0,
       timer: nil
     }
@@ -88,21 +90,25 @@ defmodule Life.Server do
 
   # This function is responsible for the evolution pattern
   @impl true
-  def handle_info(:evolve, %{cur: cur, iteration: iteration} = state) do
+  def handle_info(:evolve, %{cur: cur, cell_count: cell_count, iteration: iteration} = state) do
     IO.puts("Evolving")
 
     # Based on the iteration, update the state differently
 
+    updated_iteration = iteration + 1
+
     evolved =
       cur
       |> Enum.reduce(cur, fn {{row, col}, s}, acc ->
-        Map.update(acc, {row, col}, s, &(!&1))
+        Map.update(acc, {row, col}, s, fn _ ->
+          row == rem(updated_iteration, cell_count)
+        end)
       end)
 
-    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, iteration + 1}})
+    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, updated_iteration}})
 
     timer = Process.send_after(self(), :evolve, 1_000)
 
-    {:noreply, %{state | cur: evolved, timer: timer, iteration: iteration + 1}}
+    {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
 end
