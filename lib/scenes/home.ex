@@ -20,7 +20,7 @@ defmodule Life.Scene.Home do
       id = String.to_atom("#{row}:#{col}")
 
       rectangle(acc, {cell_size, cell_size},
-        translate: {row * cell_size, col * cell_size},
+        translate: {(row - 1) * cell_size, (col - 1) * cell_size},
         stroke: {2, :white},
         id: id
       )
