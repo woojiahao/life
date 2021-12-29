@@ -17,7 +17,7 @@ Pulsar Oscillator
 
 In the Game of Life, a board has cells that are either alive or dead. Given a set of rules, the board will change. All
 changes for a given iteration/tick happen simultaneously on the previous board status. This means that any changes to
-the cells during the current iteration will be influence the other cells.
+the cells during the current iteration will not influence the other cells.
 
 ## Rules
 
