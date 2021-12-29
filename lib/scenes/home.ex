@@ -21,7 +21,7 @@ defmodule Life.Scene.Home do
     x_offset = height + 100
 
     Server.subscribe(self())
-    initial = Server.get_initial()
+    initial = Server.get_board()
 
     graph =
       Graph.build(font: :roboto, font_size: @text_size, clear_color: :white)
@@ -42,7 +42,7 @@ defmodule Life.Scene.Home do
       cell_size: cell_size,
       started?: false,
       x_offset: x_offset,
-      alive: initial |> Enum.filter(fn {_, s} -> s end) |> Enum.map(&elem(&1, 0))
+      alive: get_alive(initial)
     }
 
     {:ok, state, push: graph}
@@ -64,7 +64,7 @@ defmodule Life.Scene.Home do
         g |> Graph.modify(:life_iteration, &text(&1, "Life iteration: #{iteration}"))
       end)
 
-    {:noreply, state, push: updated_graph}
+    {:noreply, %{state | graph: updated_graph}, push: updated_graph}
   end
 
   @impl Scenic.Scene
@@ -79,17 +79,22 @@ defmodule Life.Scene.Home do
   def filter_event({:click, :action_btn} = event, _, %{started?: true} = state) do
     IO.puts("Pausing...")
     Server.pause()
-    {:cont, event, %{state | started?: false}}
+    alive = Server.get_board() |> get_alive()
+    {:cont, event, %{state | started?: false, alive: alive}}
   end
 
   @impl Scenic.Scene
-  def filter_event({:click, :reset_btn} = event, _, %{started?: started?} = state) do
-    unless started? do
-      IO.puts("Resetting board...")
-      Server.reset()
-    end
+  def filter_event({:click, :reset_btn} = event, _, %{started?: started?, alive: alive} = state) do
+    alive =
+      unless started? do
+        IO.puts("Resetting board...")
+        Server.reset()
+        Server.get_board() |> get_alive()
+      else
+        alive
+      end
 
-    {:cont, event, state}
+    {:cont, event, %{state | alive: alive}}
   end
 
   @impl Scenic.Scene
@@ -103,9 +108,13 @@ defmodule Life.Scene.Home do
         } = state
       ) do
     %{id: id} = from
-    %{styles: %{fill: fill}} = Graph.get(graph, id) |> Enum.at(0)
+    %{styles: %{fill: fill}} = Graph.get!(graph, id)
 
-    [row, col] = id |> Atom.to_string() |> String.split(":", trim: true)
+    [row, col] =
+      id
+      |> Atom.to_string()
+      |> String.split(":", trim: true)
+      |> Enum.map(&String.to_integer/1)
 
     r = rectangle_spec({cell_size, cell_size}, fill: if(fill == @fill, do: :clear, else: @fill))
     updated_graph = Graph.modify(graph, id, &r.(&1))
@@ -141,4 +150,6 @@ defmodule Life.Scene.Home do
       )
     end)
   end
+
+  defp get_alive(board), do: board |> Enum.filter(&elem(&1, 1)) |> Enum.map(&elem(&1, 0))
 end

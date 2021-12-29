@@ -71,14 +71,14 @@ defmodule Life.Server do
     GenServer.cast(__MODULE__, {:set_board, alive})
   end
 
-  # Retrieves initial grid pattern
-  def get_initial() do
-    IO.puts("Retrieving initial grid pattern")
-    GenServer.call(__MODULE__, :initial)
+  # Retrieves board pattern
+  def get_board() do
+    IO.puts("Retrieving board pattern")
+    GenServer.call(__MODULE__, :get_board)
   end
 
   @impl true
-  def handle_call(:initial, _, %{cur: cur} = state) do
+  def handle_call(:get_board, _, %{cur: cur} = state) do
     {:reply, cur, state}
   end
 
