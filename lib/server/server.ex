@@ -25,6 +25,7 @@ defmodule Life.Server do
 
     state = %{
       cur: cur,
+      iteration: 0,
       timer: nil
     }
 
@@ -87,8 +88,10 @@ defmodule Life.Server do
 
   # This function is responsible for the evolution pattern
   @impl true
-  def handle_info(:evolve, %{cur: cur} = state) do
+  def handle_info(:evolve, %{cur: cur, iteration: iteration} = state) do
     IO.puts("Evolving")
+
+    # Based on the iteration, update the state differently
 
     evolved =
       cur
@@ -96,10 +99,10 @@ defmodule Life.Server do
         Map.update(acc, {row, col}, s, &(!&1))
       end)
 
-    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, evolved})
+    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, iteration + 1}})
 
     timer = Process.send_after(self(), :evolve, 1_000)
 
-    {:noreply, %{state | cur: evolved, timer: timer}}
+    {:noreply, %{state | cur: evolved, timer: timer, iteration: iteration + 1}}
   end
 end

@@ -46,30 +46,32 @@ defmodule Life.Scene.Home do
       |> group(&generate_grid(&1, grid_size, cell_size))
       |> group(fn g ->
         g
-        |> text("Life Iterations: ", translate: {x_offset, 100}, id: :life_iteration)
+        |> text("Life Iterations: 0", translate: {x_offset, 100}, id: :life_iteration)
         |> button("Start", translate: {x_offset, 150}, id: :start_btn)
         |> button("Stop", translate: {x_offset, 200}, id: :stop_btn)
       end)
 
     Server.subscribe(self())
 
-    state = %{
-      graph: graph,
-      iteration: 0,
-      cell_size: cell_size
-    }
+    state = %{graph: graph, cell_size: cell_size}
 
     {:ok, state, push: graph}
   end
 
   @impl Scenic.Scene
-  def handle_cast({:evolution, evolution}, %{graph: graph, cell_size: cell_size} = state) do
+  def handle_cast(
+        {:evolution, {evolution, iteration}},
+        %{graph: graph, cell_size: cell_size} = state
+      ) do
     updated_graph =
       evolution
       |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
         id = String.to_atom("#{row}:#{col}")
         fill = if v, do: :blue, else: :clear
         acc |> Graph.modify(id, &rectangle(&1, {cell_size, cell_size}, fill: fill))
+      end)
+      |> then(fn g ->
+        g |> Graph.modify(:life_iteration, &text(&1, "Life iteration: #{iteration}"))
       end)
 
     {:noreply, state, push: updated_graph}
@@ -88,35 +90,4 @@ defmodule Life.Scene.Home do
     Server.stop()
     {:cont, event, state}
   end
-
-  # @impl Scenic.Scene
-  # def filter_event(
-  #       {:click, :pause} = event,
-  #       _from,
-  #       %{
-  #         graph: graph,
-  #         grid_state: grid_state,
-  #         is_started?: is_started?
-  #       } = state
-  #     ) do
-  #   IO.inspect("Button clicked, board state is #{is_started?}")
-
-  #   updated_grid_state = grid_state |> Map.new(fn {pos, v} -> {pos, !v} end)
-
-  #   updated_graph =
-  #     updated_grid_state
-  #     |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
-  #       id = String.to_atom("#{row}:#{col}")
-  #       fill = if v, do: :blue, else: :clear
-  #       acc |> Graph.modify(id, &rectangle(&1, {@cell_size, @cell_size}, fill: fill))
-  #     end)
-
-  #   {:cont, event,
-  #    %{
-  #      state
-  #      | graph: updated_graph,
-  #        is_started?: !is_started?,
-  #        grid_state: updated_grid_state
-  #    }, push: updated_graph}
-  # end
 end
