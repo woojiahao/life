@@ -101,13 +101,16 @@ defmodule Life.Server do
       cur
       |> Enum.reduce(cur, fn {{row, col}, s}, acc ->
         Map.update(acc, {row, col}, s, fn _ ->
-          row == rem(updated_iteration, cell_count)
+          r = rem(updated_iteration, cell_count)
+          c = if r == 0, do: cell_count, else: r
+
+          row == c or col == c
         end)
       end)
 
     GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, updated_iteration}})
 
-    timer = Process.send_after(self(), :evolve, 1_000)
+    timer = Process.send_after(self(), :evolve, 100)
 
     {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
