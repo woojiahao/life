@@ -4,12 +4,12 @@ defmodule Life.Server.PatternGenerator do
     IO.puts("Creating blinker pattern")
 
     alive = [
-      {3, 1},
       {3, 2},
-      {3, 3}
+      {3, 3},
+      {3, 4}
     ]
 
-    cells |> load_pattern(alive)
+    cells |> load_alive(alive)
   end
 
   def create_pattern(cells, :beacon) do
@@ -26,7 +26,7 @@ defmodule Life.Server.PatternGenerator do
       {5, 5}
     ]
 
-    cells |> load_pattern(alive)
+    cells |> load_alive(alive)
   end
 
   def create_pattern(cells, :toad) do
@@ -41,7 +41,7 @@ defmodule Life.Server.PatternGenerator do
       {4, 4}
     ]
 
-    cells |> load_pattern(alive)
+    cells |> load_alive(alive)
   end
 
   def create_pattern(cells, :pulsar) do
@@ -98,12 +98,12 @@ defmodule Life.Server.PatternGenerator do
       {14, 12}
     ]
 
-    cells |> load_pattern(alive)
+    cells |> load_alive(alive)
   end
 
   def create_pattern(cells, _), do: cells
 
-  defp load_pattern(cells, alive) do
+  def load_alive(cells, alive) do
     cells
     |> Map.new(fn {{row, col}, _} ->
       state = if {row, col} in alive, do: true, else: false

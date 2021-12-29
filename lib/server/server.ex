@@ -67,6 +67,10 @@ defmodule Life.Server do
     GenServer.cast(__MODULE__, :reset)
   end
 
+  def set_board(alive) do
+    GenServer.cast(__MODULE__, {:set_board, alive})
+  end
+
   # Retrieves initial grid pattern
   def get_initial() do
     IO.puts("Retrieving initial grid pattern")
@@ -115,6 +119,14 @@ defmodule Life.Server do
     cur = init_board(cell_count, pattern)
     GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {cur, 0}})
     {:noreply, %{state | cur: cur, iteration: 0, timer: nil}}
+  end
+
+  @impl true
+  def handle_cast({:set_board, alive}, %{cur: cur} = state) do
+    IO.puts("Setting board...")
+    alive |> IO.inspect()
+    updated_cur = Life.Server.PatternGenerator.load_alive(cur, alive) |> IO.inspect()
+    {:noreply, %{state | cur: updated_cur}}
   end
 
   # This function is responsible for the evolution pattern

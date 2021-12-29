@@ -41,7 +41,8 @@ defmodule Life.Scene.Home do
       graph: graph,
       cell_size: cell_size,
       started?: false,
-      x_offset: x_offset
+      x_offset: x_offset,
+      alive: initial |> Enum.filter(fn {_, s} -> s end) |> Enum.map(&elem(&1, 0))
     }
 
     {:ok, state, push: graph}
@@ -67,8 +68,9 @@ defmodule Life.Scene.Home do
   end
 
   @impl Scenic.Scene
-  def filter_event({:click, :action_btn} = event, _, %{started?: false} = state) do
+  def filter_event({:click, :action_btn} = event, _, %{started?: false, alive: alive} = state) do
     IO.puts("Starting...")
+    Server.set_board(alive)
     Server.start()
     {:cont, event, %{state | started?: true}}
   end
@@ -91,9 +93,32 @@ defmodule Life.Scene.Home do
   end
 
   @impl Scenic.Scene
-  def handle_input({:cursor_button, {:left, :release, _, _}}, from, state) do
+  def handle_input(
+        {:cursor_button, {:left, :release, _, _}},
+        from,
+        %{
+          graph: graph,
+          alive: alive,
+          cell_size: cell_size
+        } = state
+      ) do
     %{id: id} = from
-    {:noreply, state}
+    %{styles: %{fill: fill}} = Graph.get(graph, id) |> Enum.at(0)
+
+    [row, col] = id |> Atom.to_string() |> String.split(":", trim: true)
+
+    r = rectangle_spec({cell_size, cell_size}, fill: if(fill == @fill, do: :clear, else: @fill))
+    updated_graph = Graph.modify(graph, id, &r.(&1))
+
+    updated_alive =
+      if fill == @fill do
+        # If the current cell is filled, we want to unfill it and remove that from the alive list
+        alive -- [{row, col}]
+      else
+        alive ++ [{row, col}]
+      end
+
+    {:noreply, %{state | graph: updated_graph, alive: updated_alive}, push: updated_graph}
   end
 
   @impl Scenic.Scene

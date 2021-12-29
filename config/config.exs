@@ -22,7 +22,7 @@ config :life, :viewport, %{
 config :life, :attrs, %{
   cell_size: 50,
   evolution_rate: 300,
-  pattern: :pulsar
+  pattern: :blinker
 }
 
 # It is also possible to import configuration files, relative to this
