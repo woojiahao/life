@@ -123,15 +123,16 @@ defmodule Life.Server do
 
     updated_iteration = iteration + 1
 
+    # Evolution happens simultaneously, so we don't need to use the previous state to calculate
     evolved =
       cur
-      |> Enum.reduce(cur, fn {{row, col}, s}, acc ->
-        Map.update(acc, {row, col}, s, fn _ ->
-          r = rem(updated_iteration, cell_count)
-          c = if r == 0, do: cell_count, else: r
+      |> Map.new(fn {{row, col}, s} ->
+        alive =
+          generate_neighbors(row, col, cell_count)
+          |> Enum.map(fn {r, c} -> cur[{r, c}] end)
+          |> Enum.filter(& &1)
 
-          row == c or col == c
-        end)
+        {{row, col}, determine_state(s, alive)}
       end)
 
     GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, updated_iteration}})
@@ -154,4 +155,25 @@ defmodule Life.Server do
   end
 
   defp create_pattern(cells, _), do: cells
+
+  defp in_grid(row, col, max), do: row >= 1 and row <= max and col >= 1 and col <= max
+
+  defp generate_neighbors(row, col, max) do
+    [
+      {row, col - 1},
+      {row, col + 1},
+      {row - 1, col},
+      {row + 1, col},
+      {row - 1, col - 1},
+      {row - 1, col + 1},
+      {row + 1, col - 1},
+      {row + 1, col + 1}
+    ]
+    |> Enum.filter(fn {r, c} -> in_grid(r, c, max) end)
+  end
+
+  defp determine_state(true, alive) when length(alive) in 2..3, do: true
+  defp determine_state(true, _), do: false
+  defp determine_state(false, alive) when length(alive) == 3, do: true
+  defp determine_state(false, _), do: false
 end

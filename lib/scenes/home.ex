@@ -14,10 +14,10 @@ defmodule Life.Scene.Home do
   defp generate_grid(graph, cell_size, initial) do
     initial
     |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
-      {{row, col}, v} |> IO.inspect()
       id = String.to_atom("#{row}:#{col}")
       fill = if v, do: :blue, else: :clear
 
+      # translation prioritize x (col) then y (row)
       rectangle(acc, {cell_size, cell_size},
         translate: {(col - 1) * cell_size, (row - 1) * cell_size},
         stroke: {2, :white},
