@@ -124,8 +124,7 @@ defmodule Life.Server do
   @impl true
   def handle_cast({:set_board, alive}, %{cur: cur} = state) do
     IO.puts("Setting board...")
-    alive |> IO.inspect()
-    updated_cur = Life.Server.PatternGenerator.load_alive(cur, alive) |> IO.inspect()
+    updated_cur = Life.Server.PatternGenerator.load_alive(cur, alive)
     {:noreply, %{state | cur: updated_cur}}
   end
 
