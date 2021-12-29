@@ -44,13 +44,17 @@ defmodule Life.Scene.Home do
       |> group(fn g ->
         g
         |> text("Life Iterations: 0", translate: {x_offset, 100}, id: :life_iteration)
-        |> button("Start", translate: {x_offset, 150}, id: :start_btn)
-        |> button("Stop", translate: {x_offset + 75, 150}, id: :stop_btn)
+        |> button("Start/Pause", translate: {x_offset, 150}, id: :action_btn)
       end)
 
     Server.subscribe(self())
 
-    state = %{graph: graph, cell_size: cell_size}
+    state = %{
+      graph: graph,
+      cell_size: cell_size,
+      started?: false,
+      x_offset: x_offset
+    }
 
     {:ok, state, push: graph}
   end
@@ -64,7 +68,7 @@ defmodule Life.Scene.Home do
       evolution
       |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
         id = String.to_atom("#{row}:#{col}")
-        fill = if v, do: :blue, else: :clear
+        fill = if v, do: :white, else: :clear
         acc |> Graph.modify(id, &rectangle(&1, {cell_size, cell_size}, fill: fill))
       end)
       |> then(fn g ->
@@ -75,16 +79,16 @@ defmodule Life.Scene.Home do
   end
 
   @impl Scenic.Scene
-  def filter_event({:click, :start_btn} = event, _from, state) do
-    IO.puts("Start clicked")
+  def filter_event({:click, :action_btn} = event, _, %{started?: false} = state) do
+    IO.puts("Starting...")
     Server.start()
-    {:cont, event, state}
+    {:cont, event, %{state | started?: true}}
   end
 
   @impl Scenic.Scene
-  def filter_event({:click, :stop_btn} = event, _from, state) do
-    IO.puts("Stop clicked")
+  def filter_event({:click, :action_btn} = event, _, %{started?: true} = state) do
+    IO.puts("Pausing...")
     Server.stop()
-    {:cont, event, state}
+    {:cont, event, %{state | started?: false}}
   end
 end
