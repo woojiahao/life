@@ -29,7 +29,7 @@ defmodule Life.Server do
     cur =
       for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false})
       |> Map.new()
-      |> create_pattern(pattern)
+      |> Life.Server.PatternGenerator.create_pattern(pattern)
 
     state = %{
       cur: cur,
@@ -141,20 +141,6 @@ defmodule Life.Server do
 
     {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
-
-  defp create_pattern(cells, :blinker) do
-    # blinker is a type of oscillator
-    IO.puts("Creating blinker pattern")
-
-    cells
-    |> Map.new(fn {{row, col}, _} ->
-      if row == 3 and col in 2..4,
-        do: {{row, col}, true},
-        else: {{row, col}, false}
-    end)
-  end
-
-  defp create_pattern(cells, _), do: cells
 
   defp in_grid(row, col, max), do: row >= 1 and row <= max and col >= 1 and col <= max
 
