@@ -144,7 +144,7 @@ defmodule Life.Scene.Home do
       # translation prioritize x (col) then y (row)
       rectangle(acc, {cell_size, cell_size},
         translate: {(col - 1) * cell_size, (row - 1) * cell_size},
-        stroke: {1, :black},
+        stroke: {1, :gray},
         id: id,
         fill: fill
       )
