@@ -14,20 +14,20 @@ defmodule Life.Server do
   end
 
   @impl true
-  def init(%{size: {_, height}, cell_size: cell_size}) do
+  def init(%{size: {_, height}, cell_size: cell_size, evolution_rate: evolution_rate}) do
     # TODO: Add rate of evolution to attrs
     IO.puts("Initializing evolution server")
 
     Agent.start_link(fn -> MapSet.new() end, name: :subscribers)
 
     cell_count = div(height, cell_size)
-    cells = for row <- 1..cell_count, col <- 1..cell_count, do: {row, col}
-    cur = cells |> Map.new(fn pos -> {pos, false} end)
+    cur = for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false}) |> Map.new()
 
     state = %{
       cur: cur,
       cell_count: cell_count,
       iteration: 0,
+      evolution_rate: evolution_rate,
       timer: nil
     }
 
@@ -80,8 +80,6 @@ defmodule Life.Server do
 
   @impl true
   def handle_cast({:notify_subscribers, event, data}, state) do
-    IO.puts("Notifying all subscribers in #{__MODULE__}")
-
     Agent.get(:subscribers, fn s -> s end)
     |> Enum.each(&GenServer.cast(&1, {event, data}))
 
@@ -90,9 +88,15 @@ defmodule Life.Server do
 
   # This function is responsible for the evolution pattern
   @impl true
-  def handle_info(:evolve, %{cur: cur, cell_count: cell_count, iteration: iteration} = state) do
-    IO.puts("Evolving")
-
+  def handle_info(
+        :evolve,
+        %{
+          cur: cur,
+          cell_count: cell_count,
+          iteration: iteration,
+          evolution_rate: evolution_rate
+        } = state
+      ) do
     # Based on the iteration, update the state differently
 
     updated_iteration = iteration + 1
@@ -110,7 +114,7 @@ defmodule Life.Server do
 
     GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {evolved, updated_iteration}})
 
-    timer = Process.send_after(self(), :evolve, 100)
+    timer = Process.send_after(self(), :evolve, evolution_rate)
 
     {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
