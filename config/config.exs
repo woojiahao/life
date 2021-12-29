@@ -1,6 +1,4 @@
-# This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
-use Mix.Config
+import Config
 
 # Configure the main viewport for the Scenic application
 config :life, :viewport, %{
@@ -17,8 +15,12 @@ config :life, :viewport, %{
 }
 
 # Config to contain the additional configurations
+# cell_size: size of the cells in the grid
+# evolution_rate: rate at which the next evolution will propagate, useful for slowing down the speed of graphic (in ms)
+# 
 config :life, :attrs, %{
-  cell_size: 50
+  cell_size: 100,
+  evolution_rate: 750
 }
 
 # It is also possible to import configuration files, relative to this
