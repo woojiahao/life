@@ -14,14 +14,22 @@ defmodule Life.Server do
   end
 
   @impl true
-  def init(%{size: {_, height}, cell_size: cell_size, evolution_rate: evolution_rate}) do
-    # TODO: Add rate of evolution to attrs
+  def init(%{
+        size: {_, height},
+        cell_size: cell_size,
+        evolution_rate: evolution_rate,
+        pattern: pattern
+      }) do
     IO.puts("Initializing evolution server")
 
     Agent.start_link(fn -> MapSet.new() end, name: :subscribers)
 
     cell_count = div(height, cell_size)
-    cur = for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false}) |> Map.new()
+
+    cur =
+      for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false})
+      |> Map.new()
+      |> create_pattern(pattern)
 
     state = %{
       cur: cur,
@@ -34,24 +42,38 @@ defmodule Life.Server do
     {:ok, state}
   end
 
+  # Adds target pid to subscriptions
   def subscribe(pid) do
     IO.puts("Subscribed to #{__MODULE__}")
     GenServer.cast(__MODULE__, {:subscribe, pid})
   end
 
+  # Removes target pid from subscriptions
   def unsubscribe(pid) do
     IO.puts("Unsubscribed from #{__MODULE__}")
     GenServer.cast(__MODULE__, {:unsubscribe, pid})
   end
 
+  # Starts evolution cycle
   def start() do
     IO.puts("Starting evolution")
     GenServer.cast(__MODULE__, {:evolve, :start})
   end
 
-  def stop() do
-    IO.puts("Stopping evolution")
-    GenServer.cast(__MODULE__, {:evolve, :stop})
+  def pause() do
+    IO.puts("Pausing evolution")
+    GenServer.cast(__MODULE__, {:evolve, :pause})
+  end
+
+  # Retrieves initial grid pattern
+  def get_initial() do
+    IO.puts("Retrieving initial grid pattern")
+    GenServer.call(__MODULE__, :initial)
+  end
+
+  @impl true
+  def handle_call(:initial, _, %{cur: cur} = state) do
+    {:reply, cur, state}
   end
 
   @impl true
@@ -67,7 +89,7 @@ defmodule Life.Server do
   end
 
   @impl true
-  def handle_cast({:evolve, :stop}, %{timer: timer} = state) do
+  def handle_cast({:evolve, :pause}, %{timer: timer} = state) do
     Process.cancel_timer(timer, async: false, info: true)
     {:noreply, state}
   end
@@ -118,4 +140,18 @@ defmodule Life.Server do
 
     {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
+
+  defp create_pattern(cells, :blinker) do
+    # blinker is a type of oscillator
+    IO.puts("Creating blinker pattern")
+
+    cells
+    |> Map.new(fn {{row, col}, _} ->
+      if row == 3 and col in 2..4,
+        do: {{row, col}, true},
+        else: {{row, col}, false}
+    end)
+  end
+
+  defp create_pattern(cells, _), do: cells
 end

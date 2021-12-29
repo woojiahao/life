@@ -11,18 +11,18 @@ defmodule Life.Scene.Home do
 
   @text_size 24
 
-  defp generate_grid(graph, grid_size, cell_size) do
-    cell_count = div(grid_size, cell_size)
-
-    cells = for row <- 1..cell_count, col <- 1..cell_count, do: {row, col}
-
-    Enum.reduce(cells, graph, fn {row, col}, acc ->
+  defp generate_grid(graph, cell_size, initial) do
+    initial
+    |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
+      {{row, col}, v} |> IO.inspect()
       id = String.to_atom("#{row}:#{col}")
+      fill = if v, do: :blue, else: :clear
 
       rectangle(acc, {cell_size, cell_size},
-        translate: {(row - 1) * cell_size, (col - 1) * cell_size},
+        translate: {(col - 1) * cell_size, (row - 1) * cell_size},
         stroke: {2, :white},
-        id: id
+        id: id,
+        fill: fill
       )
     end)
   end
@@ -33,21 +33,19 @@ defmodule Life.Scene.Home do
 
     %{cell_size: cell_size} = Application.get_env(:life, :attrs)
 
-    self() |> IO.inspect()
+    x_offset = height + 100
 
-    grid_size = height
-    x_offset = grid_size + 100
+    Server.subscribe(self())
+    initial = Server.get_initial()
 
     graph =
       Graph.build(font: :roboto, font_size: @text_size)
-      |> group(&generate_grid(&1, grid_size, cell_size))
+      |> group(&generate_grid(&1, cell_size, initial))
       |> group(fn g ->
         g
         |> text("Life Iterations: 0", translate: {x_offset, 100}, id: :life_iteration)
         |> button("Start/Pause", translate: {x_offset, 150}, id: :action_btn)
       end)
-
-    Server.subscribe(self())
 
     state = %{
       graph: graph,
@@ -88,7 +86,7 @@ defmodule Life.Scene.Home do
   @impl Scenic.Scene
   def filter_event({:click, :action_btn} = event, _, %{started?: true} = state) do
     IO.puts("Pausing...")
-    Server.stop()
+    Server.pause()
     {:cont, event, %{state | started?: false}}
   end
 end

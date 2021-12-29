@@ -17,10 +17,12 @@ config :life, :viewport, %{
 # Config to contain the additional configurations
 # cell_size: size of the cells in the grid
 # evolution_rate: rate at which the next evolution will propagate, useful for slowing down the speed of graphic (in ms)
-# 
+# pattern: pre-determined patten to visualize
+# TODO: Allow for user customized patterns
 config :life, :attrs, %{
   cell_size: 100,
-  evolution_rate: 750
+  evolution_rate: 750,
+  pattern: :blinker
 }
 
 # It is also possible to import configuration files, relative to this
