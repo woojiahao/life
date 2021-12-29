@@ -12,22 +12,6 @@ defmodule Life.Scene.Home do
   @text_size 24
   @fill :black
 
-  defp generate_grid(graph, cell_size, initial) do
-    initial
-    |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
-      id = String.to_atom("#{row}:#{col}")
-      fill = if v, do: @fill, else: :clear
-
-      # translation prioritize x (col) then y (row)
-      rectangle(acc, {cell_size, cell_size},
-        translate: {(col - 1) * cell_size, (row - 1) * cell_size},
-        stroke: {1, :black},
-        id: id,
-        fill: fill
-      )
-    end)
-  end
-
   @impl Scenic.Scene
   def init(_, opts) do
     {:ok, %ViewPort.Status{size: {_, height}}} = ViewPort.info(opts[:viewport])
@@ -50,6 +34,7 @@ defmodule Life.Scene.Home do
           fill: :black
         )
         |> button("Start/Pause", translate: {x_offset, 150}, id: :action_btn)
+        |> button("Reset", translate: {x_offset, 200}, id: :reset_btn)
       end)
 
     state = %{
@@ -93,5 +78,42 @@ defmodule Life.Scene.Home do
     IO.puts("Pausing...")
     Server.pause()
     {:cont, event, %{state | started?: false}}
+  end
+
+  @impl Scenic.Scene
+  def filter_event({:click, :reset_btn} = event, _, %{started?: started?} = state) do
+    unless started? do
+      IO.puts("Resetting board...")
+      Server.reset()
+    end
+
+    {:cont, event, state}
+  end
+
+  @impl Scenic.Scene
+  def handle_input({:cursor_button, {:left, :release, _, _}}, from, state) do
+    %{id: id} = from
+    {:noreply, state}
+  end
+
+  @impl Scenic.Scene
+  def handle_input(_, _, state) do
+    {:noreply, state}
+  end
+
+  defp generate_grid(graph, cell_size, initial) do
+    initial
+    |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
+      id = String.to_atom("#{row}:#{col}")
+      fill = if v, do: @fill, else: :clear
+
+      # translation prioritize x (col) then y (row)
+      rectangle(acc, {cell_size, cell_size},
+        translate: {(col - 1) * cell_size, (row - 1) * cell_size},
+        stroke: {1, :black},
+        id: id,
+        fill: fill
+      )
+    end)
   end
 end

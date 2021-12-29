@@ -26,16 +26,14 @@ defmodule Life.Server do
 
     cell_count = div(height, cell_size)
 
-    cur =
-      for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false})
-      |> Map.new()
-      |> Life.Server.PatternGenerator.create_pattern(pattern)
+    cur = init_board(cell_count, pattern)
 
     state = %{
       cur: cur,
       cell_count: cell_count,
       iteration: 0,
       evolution_rate: evolution_rate,
+      pattern: pattern,
       timer: nil
     }
 
@@ -63,6 +61,10 @@ defmodule Life.Server do
   def pause() do
     IO.puts("Pausing evolution")
     GenServer.cast(__MODULE__, {:evolve, :pause})
+  end
+
+  def reset() do
+    GenServer.cast(__MODULE__, :reset)
   end
 
   # Retrieves initial grid pattern
@@ -108,6 +110,13 @@ defmodule Life.Server do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_cast(:reset, %{cell_count: cell_count, pattern: pattern} = state) do
+    cur = init_board(cell_count, pattern)
+    GenServer.cast(__MODULE__, {:notify_subscribers, :evolution, {cur, 0}})
+    {:noreply, %{state | cur: cur, iteration: 0, timer: nil}}
+  end
+
   # This function is responsible for the evolution pattern
   @impl true
   def handle_info(
@@ -142,7 +151,13 @@ defmodule Life.Server do
     {:noreply, %{state | cur: evolved, timer: timer, iteration: updated_iteration}}
   end
 
-  defp in_grid(row, col, max), do: row >= 1 and row <= max and col >= 1 and col <= max
+  defp init_board(cell_count, pattern) do
+    for(row <- 1..cell_count, col <- 1..cell_count, do: {{row, col}, false})
+    |> Map.new()
+    |> Life.Server.PatternGenerator.create_pattern(pattern)
+  end
+
+  defp in_board(row, col, max), do: row >= 1 and row <= max and col >= 1 and col <= max
 
   defp generate_neighbors(row, col, max) do
     [
@@ -155,7 +170,7 @@ defmodule Life.Server do
       {row + 1, col - 1},
       {row + 1, col + 1}
     ]
-    |> Enum.filter(fn {r, c} -> in_grid(r, c, max) end)
+    |> Enum.filter(fn {r, c} -> in_board(r, c, max) end)
   end
 
   defp determine_state(true, alive) when length(alive) in 2..3, do: true
