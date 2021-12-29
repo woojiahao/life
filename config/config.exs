@@ -20,8 +20,8 @@ config :life, :viewport, %{
 # pattern: pre-determined patten to visualize such as :blinker, :beacon, :pulsar, :toad, and :empty
 # TODO: Allow for user customized patterns
 config :life, :attrs, %{
-  cell_size: 50,
-  evolution_rate: 300,
+  cell_size: 20,
+  evolution_rate: 100,
   pattern: :empty
 }
 
