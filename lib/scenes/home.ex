@@ -68,7 +68,7 @@ defmodule Life.Scene.Home do
       evolution
       |> Enum.reduce(graph, fn {{row, col}, v}, acc ->
         id = String.to_atom("#{row}:#{col}")
-        fill = if v, do: :white, else: :clear
+        fill = if v, do: :blue, else: :clear
         acc |> Graph.modify(id, &rectangle(&1, {cell_size, cell_size}, fill: fill))
       end)
       |> then(fn g ->
